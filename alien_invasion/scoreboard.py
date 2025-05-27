@@ -1,0 +1,113 @@
+import pygame.font
+from pygame.sprite import Group
+from ship import Ship
+
+class Scoreboard:
+    """显示得分信息的类"""
+    
+    def __init__(self, ai_game):
+        """初始化显示得分涉及的属性"""
+        self.ai_game = ai_game
+        self.screen = ai_game.screen
+        self.screen_rect = self.screen.get_rect()
+        self.settings = ai_game.settings  # 注意这里是settings不是setings
+        self.stats = ai_game.stats
+        
+        # 显示得分信息时使用的字体设置
+        self.text_color = (30, 30, 30)  # 深灰色文本
+        self.font = pygame.font.SysFont(None, 48)  # 默认字体，48号大小
+        
+        # 准备初始得分图像
+        self.prep_score()
+        self.prep_high_score()
+        self.prep_level()
+        self.prep_ships()
+    
+    def prep_score(self):
+        """将当前得分转换为渲染图像"""
+        rounded_score = round(self.stats.score, -1)
+        score_str = f"NOW{rounded_score:,}"  # 加上“当前得分”前缀
+        self.score_image = self.font.render(score_str, True,
+                self.text_color, self.settings.bg_color)
+
+        self.score_rect = self.score_image.get_rect()
+        self.score_rect.right = self.screen_rect.right - 20
+        self.score_rect.top = 20
+
+    
+    def show_score(self):
+        """在屏幕上显示得分等级和余下的飞船数"""
+        self.screen.blit(self.score_image, self.score_rect)
+        self.screen.blit(self.high_score_image, self.high_score_rect)
+        self.screen.blit(self.level_image, self.level_rect)
+        self.ships.draw(self.screen)
+        self.draw_energy_bar()  # ✨ 添加能量条绘制
+    
+    def prep_high_score(self):
+        """将最高分渲染为图像"""
+        high_score = round(self.stats.high_score, -1)
+        high_score_str = f"Highest{high_score:,}"  # 加上“最高得分”前缀
+
+        self.high_score_image = self.font.render(
+            high_score_str,
+            True,
+            self.text_color,
+            self.settings.bg_color
+        )
+
+        self.high_score_rect = self.high_score_image.get_rect()
+        self.high_score_rect.centerx = self.screen_rect.centerx
+        self.high_score_rect.top = self.score_rect.top
+
+    
+    def check_high_score(self):
+        """检查是否诞生了新的最高分"""
+        if self.stats.score > self.stats.high_score:
+            self.stats.high_score = self.stats.score
+            self.prep_high_score()
+    
+    def prep_level(self): 
+        """将等级渲染为图像"""
+        level_str = str(self.stats.level)
+        
+        self.level_image = self.font.render(
+            level_str,
+            True,
+            self.text_color,
+            self.settings.bg_color
+        )
+        
+        # 将等级放在得分下方
+        self.level_rect = self.level_image.get_rect()
+        self.level_rect.right = self.score_rect.right  # 与得分右对齐
+        self.level_rect.top = self.score_rect.bottom + 10  # 得分下方10像素
+    
+    def prep_ships(self):
+
+        """显示剩余飞船数量"""
+        self.ships = Group()
+        for ship_number in range(self.stats.ships_left):
+            ship = Ship(self.ai_game)  # 修改这里，传入ai_game而不是单独参数
+            ship.rect.x = 10 + ship_number * ship.rect.width
+            ship.rect.y = 10
+            self.ships.add(ship)
+
+    def draw_energy_bar(self):
+        """绘制能量条"""
+        bar_width = 200
+        bar_height = 20
+        bar_x = 20
+        bar_y = 50
+
+        # 外框
+        pygame.draw.rect(self.screen, (255, 255, 255), 
+                        (bar_x - 2, bar_y - 2, bar_width + 4, bar_height + 4), 2)
+
+        # 填充条（根据当前能量百分比）
+        fill_ratio = self.stats.energy / self.stats.energy_max
+        fill_width = int(bar_width * fill_ratio)
+
+        # 颜色从浅蓝到深蓝渐变
+        energy_color = (0, 120, 255)
+        pygame.draw.rect(self.screen, energy_color, 
+                        (bar_x, bar_y, fill_width, bar_height))
